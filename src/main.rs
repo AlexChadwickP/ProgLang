@@ -3,7 +3,7 @@
 
 use std::collections::VecDeque;
 use std::fmt;
-use std::io::{stdin,stdout,Write};
+use std::io::{stdin, stdout, Write};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -16,6 +16,7 @@ enum TokenType {
     Keyword,
     // Arithmetic Operators
     Plus,
+    Multiply,
 }
 
 impl fmt::Display for TokenType {
@@ -27,7 +28,7 @@ impl fmt::Display for TokenType {
 #[derive(Debug)]
 struct Token {
     token_type: TokenType,
-    token_value: String
+    token_value: String,
 }
 
 impl Token {
@@ -85,12 +86,25 @@ impl Lexer {
                 tokens.push(self.match_number());
             }
             if self.current_character == '+' {
-                tokens.push(Token { token_type: TokenType::Plus, token_value: String::new() });
+                tokens.push(Token {
+                    token_type: TokenType::Plus,
+                    token_value: String::new(),
+                });
+            }
+            if self.current_character == '*' {
+                tokens.push(Token {
+                    token_type: TokenType::Multiply,
+                    token_value: String::new(),
+                });
             }
             if self.current_character == '"' {
                 tokens.push(self.match_string());
             }
-            if (self.current_character != '+' && self.current_character != '"' && !self.current_character.is_numeric()) && !self.current_character.is_whitespace() {
+            if (self.current_character != '+'
+                && self.current_character != '"'
+                && !self.current_character.is_numeric())
+                && !self.current_character.is_whitespace()
+            {
                 tokens.push(self.match_keyword());
             }
             self.advance();
@@ -100,17 +114,21 @@ impl Lexer {
     }
 
     fn peek(&mut self, offset: usize) -> char {
-        return match self.src.chars().nth((self.current_position + offset) as usize) {
+        return match self
+            .src
+            .chars()
+            .nth((self.current_position + offset) as usize)
+        {
             Some(character) => character,
-            None => '\0'
-        }
+            None => '\0',
+        };
     }
 
     fn advance(&mut self) {
         self.current_position += 1;
         self.current_character = match self.src.chars().nth(self.current_position as usize) {
             Some(character) => character,
-            None => '\0'
+            None => '\0',
         };
     }
 
@@ -122,14 +140,21 @@ impl Lexer {
 
         while self.peek(1).is_numeric() || self.peek(1) == '.' {
             self.advance();
-            if has_dot && self.current_character == '.' { Error::new("IllegalCharError", "Found an extra dot").throw() }
-            else if self.current_character == '.' { has_dot = true; }
+            if has_dot && self.current_character == '.' {
+                Error::new("IllegalCharError", "Found an extra dot").throw()
+            } else if self.current_character == '.' {
+                has_dot = true;
+            }
             number += &*self.current_character.to_string();
         }
 
         self.advance();
 
-        return if has_dot { Token::new(TokenType::Float, number) } else { Token::new(TokenType::Int, number) }
+        return if has_dot {
+            Token::new(TokenType::Float, number)
+        } else {
+            Token::new(TokenType::Int, number)
+        };
     }
 
     fn match_string(&mut self) -> Token {
@@ -158,14 +183,12 @@ impl Lexer {
 }
 
 struct Runner {
-    token_stack: VecDeque<Token>
+    token_stack: VecDeque<Token>,
 }
 
 impl Runner {
     fn new(stack: VecDeque<Token>) -> Runner {
-        Runner {
-            token_stack: stack,
-        }
+        Runner { token_stack: stack }
     }
 
     fn start(&mut self) {
@@ -186,7 +209,11 @@ impl Runner {
         let keyword = token.token_value;
         match &keyword[..] {
             "puts" => self.puts(),
-            _ => Error::new("Unknown keyword error", &format!("No such keyword: {}", keyword)[..]).throw()
+            _ => Error::new(
+                "Unknown keyword error",
+                &format!("No such keyword: {}", keyword)[..],
+            )
+            .throw(),
         }
     }
 
@@ -198,20 +225,25 @@ impl Runner {
 
     fn add(&mut self) -> Token {
         let mut first = self.token_stack.pop_front().unwrap();
-        let mut second= self.token_stack.pop_front().unwrap();
+        let mut second = self.token_stack.pop_front().unwrap();
 
         if second.token_type == TokenType::Plus {
             second = self.add();
         }
 
-        if first.token_type.to_string() != second.token_type.to_string() {
-            Error::new("Mismatched types", "Cannot add on 2 values of different types").throw();
+        if first.token_type != second.token_type {
+            Error::new(
+                "Mismatched types",
+                "Cannot add on 2 values of different types",
+            )
+            .throw();
         }
 
         let first_num = first.token_value;
         let second_num = second.token_value;
 
-        let result: usize = first_num.parse::<usize>().unwrap() + second_num.parse::<usize>().unwrap();
+        let result: usize =
+            first_num.parse::<usize>().unwrap() + second_num.parse::<usize>().unwrap();
 
         println!("{}", result);
 
@@ -223,7 +255,9 @@ fn get_input(msg: &str) -> String {
     print!("{}", msg);
     let mut s = String::new();
     let _ = stdout().flush();
-    stdin().read_line(&mut s).expect("How on earth did you mess up a string");
+    stdin()
+        .read_line(&mut s)
+        .expect("How on earth did you mess up a string");
 
     return s;
 }
