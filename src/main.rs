@@ -4,7 +4,6 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::io::{stdin, stdout, Write};
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 #[derive(Debug, PartialEq, EnumIter)]
@@ -195,12 +194,14 @@ impl Runner {
         while !self.token_stack.is_empty() {
             let token = self.token_stack.pop_back().unwrap();
 
-            if token.token_type.to_string() == String::from("Plus") {
-                self.add();
-                println!("{:?}", self.token_stack);
-            }
-            if token.token_type == TokenType::Keyword {
-                self.handle_keyword(token);
+            match token.token_type {
+                Some(TokenType::Plus) => self.add(),
+                Some(TokenType::Multiply) => self.multiply(),
+                Some(TokenType::Keyword) => self.handle_keyword(token),
+                None => Error::new(
+                    "Unknown token error",
+                    "Unrecognised token {:?}"
+                )
             }
         }
     }
@@ -224,7 +225,7 @@ impl Runner {
     }
 
     fn add(&mut self) -> Token {
-        let mut first = self.token_stack.pop_back().unwrap();
+        let first = self.token_stack.pop_back().unwrap();
         let mut second = self.token_stack.pop_back().unwrap();
 
         if second.token_type == TokenType::Plus {
@@ -260,7 +261,7 @@ impl Runner {
     }
 
     fn multiply(&mut self) -> Token {
-        let mut first = self.token_stack.pop_front().unwrap();
+        let first = self.token_stack.pop_front().unwrap();
         let mut second = self.token_stack.pop_front().unwrap();
 
         if second.token_type == TokenType::Multiply {
