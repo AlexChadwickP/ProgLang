@@ -193,13 +193,13 @@ impl Runner {
 
     fn start(&mut self) {
         while !self.token_stack.is_empty() {
-            // DEBUG: println!("{:?}", self.token_stack.last().unwrap());
-            let token: Token = self.token_stack.pop_back().unwrap();
-            // Addition!
+            let token = self.token_stack.pop_back().unwrap();
+
             if token.token_type.to_string() == String::from("Plus") {
-                let token_to_add = self.add();
-                self.token_stack.push_front(token_to_add);
-            } else if token.token_type.to_string() == String::from("Keyword") {
+                self.add();
+                println!("{:?}", self.token_stack);
+            }
+            if token.token_type == TokenType::Keyword {
                 self.handle_keyword(token);
             }
         }
@@ -224,11 +224,47 @@ impl Runner {
     }
 
     fn add(&mut self) -> Token {
-        let mut first = self.token_stack.pop_front().unwrap();
-        let mut second = self.token_stack.pop_front().unwrap();
+        let mut first = self.token_stack.pop_back().unwrap();
+        let mut second = self.token_stack.pop_back().unwrap();
 
         if second.token_type == TokenType::Plus {
             second = self.add();
+        }
+
+        if first.token_type != second.token_type {
+            println!("{:?}", self.token_stack);
+            println!(
+                "First arg: {:?}\nSecond arg: {:?}",
+                first.token_type, second.token_type
+            );
+            Error::new(
+                "Mismatched types",
+                "Cannot add on 2 values of different types",
+            )
+            .throw();
+        }
+
+        let first_num = first.token_value;
+        let second_num = second.token_value;
+
+        let result: usize =
+            first_num.parse::<usize>().unwrap() + second_num.parse::<usize>().unwrap();
+
+        println!("{}", result);
+
+        self.token_stack.push_front(Token {
+            token_type: TokenType::Int,
+            token_value: result.to_string(),
+        });
+        Token::new(first.token_type, result.to_string())
+    }
+
+    fn multiply(&mut self) -> Token {
+        let mut first = self.token_stack.pop_front().unwrap();
+        let mut second = self.token_stack.pop_front().unwrap();
+
+        if second.token_type == TokenType::Multiply {
+            second = self.multiply();
         }
 
         if first.token_type != second.token_type {
